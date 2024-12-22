@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useClient } from '@/contexts/ClientContext';
+import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 
 interface User {
@@ -10,6 +11,9 @@ interface User {
   email: string;
   password?: string;
   createdAt?: string;
+  isGuest: boolean;
+  hasAcceptedTerms: boolean;
+  accessLevel: number;
 }
 
 interface PaginatedResult {
@@ -37,10 +41,20 @@ const formatDate = (dateString?: string) => {
 export default function UsersPage() {
   const { user, logout, isLoading: authLoading } = useAuthContext();
   const { client, clientType, switchClient } = useClient();
+  const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
   const [isEditing, setIsEditing] = useState<string | null>(null);
-  const [newUser, setNewUser] = useState({ email: '', password: '' });
-  const [editForm, setEditForm] = useState({ email: '' });
+  const [newUser, setNewUser] = useState({
+    email: '',
+    password: '',
+    isGuest: false,
+    hasAcceptedTerms: true,
+    accessLevel: 1
+  });
+  const [editForm, setEditForm] = useState({
+    hasAcceptedTerms: true,
+    accessLevel: 0
+  });
   
   // Pagination state
   const [total, setTotal] = useState(0);
@@ -93,7 +107,13 @@ export default function UsersPage() {
     e.preventDefault();
     try {
       await client.service('users').create(newUser);
-      setNewUser({ email: '', password: '' });
+      setNewUser({
+        email: '',
+        password: '',
+        isGuest: false,
+        hasAcceptedTerms: true,
+        accessLevel: 1
+      });
       toast.success('User created successfully');
       fetchUsers();
     } catch (error) {
@@ -106,7 +126,10 @@ export default function UsersPage() {
     if (!isEditing) return;
 
     try {
-      await client.service('users').patch(isEditing, editForm);
+      await client.service('users').patch(isEditing, {
+        hasAcceptedTerms: editForm.hasAcceptedTerms,
+        accessLevel: editForm.accessLevel
+      });
       setIsEditing(null);
       toast.success('User updated successfully');
       fetchUsers();
@@ -143,14 +166,19 @@ export default function UsersPage() {
 
   const startEdit = (user: User) => {
     setIsEditing(user._id);
-    setEditForm({ email: user.email });
+    setEditForm({
+      hasAcceptedTerms: user.hasAcceptedTerms,
+      accessLevel: user.accessLevel
+    });
   };
 
   const handleLogout = async () => {
     try {
       await logout();
     } catch (error) {
-      toast.error('Logout failed');
+      console.error('Logout failed:', error);
+      // Force redirect to login page even if logout fails
+      router.push('/login');
     }
   };
 
@@ -213,6 +241,37 @@ export default function UsersPage() {
                   required
                 />
               </div>
+              <div>
+                <label htmlFor="accessLevel" className="block mb-1">Access Level</label>
+                <input
+                  id="accessLevel"
+                  type="number"
+                  value={newUser.accessLevel}
+                  onChange={(e) => setNewUser({ ...newUser, accessLevel: parseInt(e.target.value) })}
+                  className="border rounded px-2 py-1 w-full"
+                  required
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  id="hasAcceptedTerms"
+                  type="checkbox"
+                  checked={newUser.hasAcceptedTerms}
+                  onChange={(e) => setNewUser({ ...newUser, hasAcceptedTerms: e.target.checked })}
+                  className="border rounded"
+                />
+                <label htmlFor="hasAcceptedTerms">Has Accepted Terms</label>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  id="isGuest"
+                  type="checkbox"
+                  checked={newUser.isGuest}
+                  onChange={(e) => setNewUser({ ...newUser, isGuest: e.target.checked })}
+                  className="border rounded"
+                />
+                <label htmlFor="isGuest">Is Guest</label>
+              </div>
               <button
                 type="submit"
                 className="border rounded px-4 py-1 bg-blue-500 text-white hover:bg-blue-600 w-fit"
@@ -235,6 +294,8 @@ export default function UsersPage() {
                   <thead>
                     <tr className="border-b">
                       <th className="text-left py-2">Email</th>
+                      <th className="text-left py-2">Access Level</th>
+                      <th className="text-left py-2">Terms</th>
                       <th className="text-left py-2">Created At</th>
                       <th className="text-left py-2">Actions</th>
                     </tr>
@@ -242,24 +303,31 @@ export default function UsersPage() {
                   <tbody>
                     {users.map((user) => (
                       <tr key={user._id} className="border-b">
-                        <td className="py-2">
-                          {isEditing === user._id ? (
-                            <input
-                              type="email"
-                              value={editForm.email}
-                              onChange={(e) => setEditForm({ email: e.target.value })}
-                              className="border rounded px-2 py-1 w-full"
-                            />
-                          ) : (
-                            user.email
-                          )}
-                        </td>
-                        <td className="py-2">
-                          {formatDate(user.createdAt)}
-                        </td>
+                        <td className="py-2">{user.email}</td>
+                        <td className="py-2">{user.accessLevel}</td>
+                        <td className="py-2">{user.hasAcceptedTerms ? 'Yes' : 'No'}</td>
+                        <td className="py-2">{formatDate(user.createdAt)}</td>
                         <td className="py-2">
                           {isEditing === user._id ? (
                             <div className="flex gap-2">
+                              <div>
+                                <label className="block text-sm">Access Level</label>
+                                <input
+                                  type="number"
+                                  value={editForm.accessLevel}
+                                  onChange={(e) => setEditForm({ ...editForm, accessLevel: parseInt(e.target.value) })}
+                                  className="border rounded px-2 py-1"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-sm">Has Accepted Terms</label>
+                                <input
+                                  type="checkbox"
+                                  checked={editForm.hasAcceptedTerms}
+                                  onChange={(e) => setEditForm({ ...editForm, hasAcceptedTerms: e.target.checked })}
+                                  className="border rounded px-2 py-1"
+                                />
+                              </div>
                               <button
                                 onClick={handleUpdate}
                                 className="border rounded px-3 py-1 bg-green-500 text-white hover:bg-green-600"

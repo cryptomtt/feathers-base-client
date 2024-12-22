@@ -1,7 +1,6 @@
 import React from 'react';
-import { Toaster } from 'react-hot-toast';
-import { ClientProvider } from '@/contexts/ClientContext';
-import { AuthProvider } from '@/contexts/AuthContext';
+import { Providers } from '@/providers';
+import { ClientLayout } from '@/components/ClientLayout';
 import './globals.css';
 import type { Metadata } from 'next';
 
@@ -17,13 +16,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body suppressHydrationWarning={true}>
-        <ClientProvider>
-          <AuthProvider>
+      <body>
+        <Providers>
+          <ClientLayout>
             {children}
-            <Toaster />
-          </AuthProvider>
-        </ClientProvider>
+          </ClientLayout>
+        </Providers>
       </body>
     </html>
   );

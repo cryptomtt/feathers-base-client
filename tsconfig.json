@@ -34,9 +34,14 @@
       "react",
       "react-dom",
       "next",
-      "react-hook-form",
-      "react-hot-toast",
-      "tailwindcss"  // Added this line
+      "tailwindcss",
+      "privy",
+      "ethers"
+    ],
+    "baseUrl": ".",
+    "typeRoots": [
+      "./node_modules/@types",
+      "./src/types"
     ]
   },
   "include": [
@@ -44,7 +49,8 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    "tailwind.config.ts"  // Added this line
+    "tailwind.config.ts",
+    "src/types/*.d.ts"
   ],
   "exclude": [
     "node_modules"
